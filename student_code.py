@@ -242,7 +242,7 @@ class SortableDigraph(VersatileDigraph):
         return top_order
 
 class TraversableDigraph(SortableDigraph):
-    "traversableDigraph class that inherits from SortableDigraph and adds DFS and BFS traversal methods"
+    "inherits from SortableDigraph and adds DFS and BFS traversal methods"
     def dfs(self, start_node_id=None):
         " depth-first search traversal of the digraph"
         if not self.nodes:
@@ -272,7 +272,7 @@ class TraversableDigraph(SortableDigraph):
             return
         # if no start node specified, use the first node
         if start_node_id is None:
-            start_node_id = next(iter(self.nodes.keys()))   
+            start_node_id = next(iter(self.nodes.keys()))
         if start_node_id not in self.nodes:
             raise ValueError(f"Start node '{start_node_id}' does not exist")
         visited = set()
@@ -293,3 +293,43 @@ class TraversableDigraph(SortableDigraph):
                     if successor not in visited:
                         visited.add(successor)
                         queue.append(successor)
+class DAG(TraversableDigraph):
+    "DAG class that inherits from TraversableDigraph and ensures no cycles are created"
+    def add_edge(self, start_node_id, end_node_id, start_node_value=0,
+                 end_node_value=0, edge_name=None, edge_weight=1):
+        "add edge to the graph, ensuring it doesn't create a cycle"
+        # check for cycle
+        if self._would_create_cycle(start_node_id, end_node_id):
+            raise ValueError(
+                f"Adding edge from {start_node_id} to {end_node_id} would create a cycle"
+            )
+        # if no cycle would be created, call parent's add_edge method
+        super().add_edge(start_node_id, end_node_id, start_node_value,
+                        end_node_value, edge_name, edge_weight)
+    def _would_create_cycle(self, start_node_id, end_node_id):
+        """check if adding an edge from start_node_id to end_node_id would create a cycle"""
+        # if start and end are the same node, it would create a self-loop cycle
+        if start_node_id == end_node_id:
+            return True
+        return self._has_path(end_node_id, start_node_id)
+    def _has_path(self, from_node_id, to_node_id):
+        """Check if there's a path from from_node_id to to_node_id using BFS"""
+        if from_node_id not in self.nodes or to_node_id not in self.nodes:
+            return False
+        if from_node_id == to_node_id:
+            return True
+        visited = set()
+        queue = deque([from_node_id])
+        visited.add(from_node_id)
+        while queue:
+            current_node = queue.popleft()
+            # check if we reached the target node
+            if current_node == to_node_id:
+                return True
+            # add all unvisited successors to the queue
+            if current_node in self.edges:
+                for successor in self.edges[current_node]:
+                    if successor not in visited:
+                        visited.add(successor)
+                        queue.append(successor)
+        return False
